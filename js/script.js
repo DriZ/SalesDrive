@@ -247,7 +247,7 @@
             button.appendChild(content);
 
             fetchOrderTotalsCached(filter.key, query).then(totals => {
-                badgeCount.textContent = totals?.count + " шт: " + totals?.paymentAmount + " грн.";
+                badgeCount.textContent = totals.count > 0 ? totals?.count + " шт: " + totals?.paymentAmount + " грн." : "—";
                 if (totals?.count === 0) badgeCount.classList.replace("badge-info", "badge-secondary");
                 else if (badgeCount.classList.contains("badge-secondary")) badgeCount.classList.replace("badge-secondary", "badge-info");
             });
