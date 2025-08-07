@@ -306,7 +306,7 @@
     }
 
     // Запускаем наблюдение
-    const observer = new MutationObserver((mutations, obs) => {
+    const observer = new MutationObserver(() => {
         const anchor = document.querySelector("#wrap > div.container-fluid.order-index.ng-scope > div > div > div > div > div > div:nth-child(3) > div.m-top10.ng-scope");
         if (anchor && !document.querySelector(".btn-group-sm.m-top10")) {
             if (!document.querySelector(".btn-group-sm.m-top10")) insertPanel(anchor);
