@@ -369,11 +369,8 @@ document.addEventListener("DOMContentLoaded", () => {
 	});
 
 	document.getElementById("clearAllBtn").addEventListener("click", () => {
-  		if (!confirm("Ви дійсно хочете видалити всі API ключі?")) return;
-
-    	getStorageArea().then(storage => {
-      		storage.set({ apiKeys: {} }).then(() => renderKeys({}));
-    	});
+  		if (!confirm(translations[currentLang].removeAllApiKeys)) return;
+    	getStorageArea().then(storage => storage.set({ apiKeys: {} }).then(() => renderKeys({})));
 		showStatusMessage(translations[currentLang].allKeysCleared, "success")
   	});
 
