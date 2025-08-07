@@ -1,0 +1,21 @@
+{
+  "name": "SalesDrive Helper",
+  "version": "1.0",
+  "manifest_version": 3,
+  "description": "Работа с заявками SalesDrive",
+  "permissions": ["scripting", "storage"],
+  "host_permissions": [
+    "*://*.salesdrive.me/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*://*.salesdrive.me/*"],
+      "js": ["js/script.js"]
+    }
+  ],
+  "action": {
+    "default_title": "SalesDrive",
+    "default_icon": "img/icon.png",
+    "default_popup": "popup.html"
+  }
+}
