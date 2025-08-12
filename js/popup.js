@@ -1,12 +1,15 @@
-const langToggleBtn = document.getElementById("langToggleBtn");
-const themeToggleBtn = document.getElementById("themeToggleBtn");
+const $langToggleBtn = $("#langToggleBtn");
+const $themeToggleBtn = $("#themeToggleBtn");
 let currentLang = "ua";
 
-const hiddenFileInput = document.createElement('input');
-hiddenFileInput.type = 'file';
-hiddenFileInput.accept = '.json';
-hiddenFileInput.style.display = 'none';
-document.body.appendChild(hiddenFileInput);
+const $hiddenFileInput = $("<input>", {
+	type: "file",
+	accept: ".json",
+})
+	.css({
+		display: 'none',
+	})
+	.append("body");
 
 async function getStorageArea() {
 	try {
@@ -18,10 +21,12 @@ async function getStorageArea() {
 	}
 }
 
-themeToggleBtn.addEventListener("click", () => {
-	document.body.classList.toggle("dark-theme");
-	const isDark = document.body.classList.contains("dark-theme");
+$themeToggleBtn.on("click", () => {
+	const $body = $("body")
+	$body.toggleClass("dark-theme");
+	const isDark = $body.hasClass("dark-theme");
 	getStorageArea().then(storage => storage.set({ theme: isDark ? "dark" : "light" }));
+	$body.attr("data-bs-theme", $body.hasClass("dark-theme") ? "dark" : "light");
 });
 
 const translations = {
@@ -52,9 +57,23 @@ const translations = {
 		selectJsonFile: "Виберіть JSON-файл для импорту.",
 		errWhileReadJson: "Помилка при читанні JSON-файлу.",
 		edit: "Редагувати",
+		editKey: "Редагувати ключ",
 		delete: "Видалити",
+		deleteKey: "Видалити ключ",
 		enterValidKey: "Введіть дійсний ключ (100 символів).",
 		importedKeysSaved: "Обрані ключі успішно імпортовані.",
+		exportKeysSuccess: "Ключі успішно експортовані",
+		removeAllApiKeys: "Ви дійсно хочете видалити всі API ключі?",
+		actionCantBeUndone: "Цю дію не можна скасувати.",
+		fillAllRows: "Заповніть всі поля",
+		file2Large: "Файл занадто великий. Максимум 2 MB",
+		fileLoaded: "Файл завантажений. Перегляньте перед імпортом",
+		incorrectStruct: "Неправильна структура apiKeys",
+		exists: "Вже є",
+		beUpdated: "Буде оновлено",
+		new: "Новий",
+		editNameText: "Назва ключа",
+		cancel: "Відміна",
 	},
 	ru: {
 		toggleKeysBtn: "Показать сохранённые ключи ⬇",
@@ -83,9 +102,23 @@ const translations = {
 		selectJsonFile: "Выберите JSON-файл для импорта.",
 		errWhileReadJson: "Ошибка при чтении JSON-файла.",
 		edit: "Редактировать",
+		editKey: "Редактировать ключ",
 		delete: "Удалить",
+		deleteKey: "Удалить ключ",
 		enterValidKey: "Введите действительный ключ (100 символов).",
 		importedKeysSaved: "Выбранные ключи успешно импортированы.",
+		exportKeysSuccess: "Ключи успешно экспортированы",
+		removeAllApiKeys: "Вы действительно хотите удалить все API ключи?",
+		actionCantBeUndone: "Это действие нельзя отменить.",
+		fillAllRows: "Заполните все поля",
+		file2Large: "Файл слишком большой. Максимум 2 MB",
+		fileLoaded: "Файл загружен. Проверьте предпросмотр перед импортом",
+		incorrectStruct: "Неверная структура apiKeys",
+		exists: "Уже есть",
+		beUpdated: "Будет обновлено",
+		new: "Новый",
+		editNameText: "Имя ключа",
+		cancel: "Отмена",
 	}
 };
 
@@ -96,168 +129,298 @@ function updateLanguage() {
 		// Обработка placeholder
 		if (key.endsWith("Placeholder")) {
 			const inputId = key.replace("Placeholder", "");
-			const inputEl = document.getElementById(inputId);
-			if (inputEl) inputEl.setAttribute("placeholder", t[key]);
+			const $inputEl = $(`#${inputId}`);
+			if ($inputEl.length) $inputEl.attr("placeholder", t[key]);
 			continue;
 		}
 
 		// Обработка обычного текста
-		const el = document.getElementById(key);
-		if (el) el.textContent = t[key];
+		const $el = $(`#${key}`);
+		if ($el.length) $el.text(t[key]);
 	}
 
 	// Обновляем toggleKeysBtn по классу
-	const toggleBtn = document.getElementById("toggleKeysBtn");
-	if (toggleBtn) {
-		const isHidden = toggleBtn.classList.contains("hide");
-		toggleBtn.textContent = isHidden ? t.toggleKeysBtn : t.hideKeys;
+	const $toggleBtn = $("#toggleKeysBtn");
+	if ($toggleBtn.length) {
+		const isHidden = $toggleBtn.hasClass("hide");
+		$toggleBtn.text(isHidden ? t.toggleKeysBtn : t.hideKeys);
 	}
 }
 
-langToggleBtn.addEventListener("click", () => {
+$langToggleBtn.on("click", () => {
 	currentLang = currentLang === "ua" ? "ru" : "ua";
 	getStorageArea().then(storage => storage.set({ selectedLang: currentLang }))
 	updateLanguage();
 });
 
-function showStatusMessage(message, type = "info") {
-	const box = document.getElementById("statusMessage");
-	const icon = document.getElementById("statusIcon");
-	const text = document.getElementById("statusText");
+function showStatusMessage(message, type = 'info', duration = 5000) {
+	const $box  = $('#statusMessage');
+	const $icon = $('#statusIcon');
+	const $text = $('#statusText');
 
-	text.textContent = message;
+	const icons = {
+		success: '✅',
+		error:   '❌',
+		info:    'ℹ️',
+		warning: '⚠️'
+	};
 
-	if (type === "error") {
-		box.style.backgroundColor = "#f8d7da";
-		box.style.color = "#842029";
-		box.style.border = "1px solid #f5c2c7";
-		icon.textContent = "❌";
-	} else {
-		box.style.backgroundColor = "#d1e7dd";
-		box.style.color = "#0f5132";
-		box.style.border = "1px solid #badbcc";
-		icon.textContent = "✅";
-	}
+	// Текст и иконка
+	$text.text(message);
+	$icon.text(icons[type] || icons.info);
 
-	box.style.opacity = "1";
-	box.style.display = "block";
+	// Цветовая схема через классы
+	$box
+		.removeClass('status--success status--error status--info status--warning')
+		.addClass(`status--${type}`);
 
+	// Остановить прошлые анимации и таймер
+	$box.stop(true, true).fadeIn(150);
+	const prevTimer = $box.data('hideTimer');
+	if (prevTimer) clearTimeout(prevTimer);
+
+	// Авто-скрытие
+	const hideTimer = setTimeout(() => {
+		$box.fadeOut(300);
+	}, duration);
+
+	$box.data('hideTimer', hideTimer);
+}
+
+// По желанию: клик по сообщению — сразу скрыть
+$(document).on('click', '#statusMessage', function () {
+	const $box = $(this);
+	const t = $box.data('hideTimer');
+	if (t) clearTimeout(t);
+	$box.stop(true, true).fadeOut(150);
+});
+
+async function editKey(id) {
+	const storage = await getStorageArea();
+	const { apiKeys = {} } = await storage.get({ apiKeys: {} });
+	const current = apiKeys[id];
+
+	showModal({
+		title: `${translations[currentLang].editKey} «${current.name}»`,
+		bodyHTML: $('#editForm').prop("outerHTML"),
+		okLabel: translations[currentLang].saveBtn,
+		onConfirm: async () => {
+			const $form = $('#editForm');
+			const name = $form.find('#editName').val().trim();
+			const key = $form.find('#editValue').val().trim();
+
+			if (!name || !key) return; // можно сделать alert или shake effect
+
+			apiKeys[id] = { name, key };
+			await storage.set({ apiKeys });
+			renderKeys(apiKeys);
+		}
+	});
+
+	// Заполнить форму данными (после .show)
 	setTimeout(() => {
-		box.style.opacity = "0";
-		setTimeout(() => {
-			box.style.display = "none";
-		}, 300); // после исчезновения
-	}, 5000);
+		const $form = $('#editForm');
+		if ($form.length) {
+			$form.removeClass('d-none');
+			$form.find('#editName').val(current.name);
+			$form.find('#editValue').val(current.key);
+		}
+	}, 50);
 }
 
-function editKey(id) {
-  	getStorageArea().then(storage => {
-    	storage.get({ apiKeys: {} }).then(({ apiKeys }) => {
-      		const current = apiKeys[id];
-      		const newName = prompt("Новое имя:", current.name);
-      		const newKey = prompt("Новый API-ключ:", current.key);
-      		if (newName && newKey) {
-        		apiKeys[id] = { name: newName, key: newKey };
-        		storage.set({ apiKeys }).then(() => renderKeys(apiKeys));
-      		}
-    	});
-  	});
+// Небольшой эскейп, чтобы безопасно подставлять названия в HTML
+function escapeHtml(str = '') {
+	return String(str)
+		.replaceAll('&', '&amp;')
+		.replaceAll('<', '&lt;')
+		.replaceAll('>', '&gt;')
+		.replaceAll('"', '&quot;')
+		.replaceAll("'", '&#39;');
 }
 
-function deleteKey(id) {
-  	getStorageArea().then(storage => {
-    	storage.get({ apiKeys: {} }).then(({ apiKeys }) => {
-      		delete apiKeys[id];
-      		storage.set({ apiKeys }).then(() => renderKeys(apiKeys));
-    	});
-  	});
+/**
+ * Универсальная модалка
+ * options: { title, bodyHTML, okLabel, okClass, onConfirm, onCancel }
+ */
+function showModal({ title, bodyHTML, okLabel = 'ОК', okClass = 'btn-primary', onConfirm, onCancel }) {
+	const $modalEl = $('#confirmModal');
+	const modalEl = $modalEl[0];
+	const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+	// Темизация
+	modalEl.setAttribute(
+		'data-bs-theme',
+		$('body').hasClass('dark-theme') ? 'dark' : 'light'
+	);
+
+	$modalEl.find('.modal-title').text(title);
+	$modalEl.find('.modal-body').html(bodyHTML);
+
+	const $okBtn = $modalEl.find('#confirmModalOk');
+	$okBtn.text(okLabel).attr('class', `btn ${okClass}`);
+
+	const onOk = function () {
+		cleanup();
+		bsModal.hide();
+		if (typeof onConfirm === 'function') onConfirm();
+	};
+	const onHide = function () {
+		cleanup();
+		if (typeof onCancel === 'function') onCancel();
+	};
+	const onKey = function (e) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			onOk();
+		}
+		if (e.key === 'Escape') {
+			e.preventDefault();
+			cleanup();
+			bsModal.hide();
+		}
+	};
+	const cleanup = function () {
+		$okBtn.off('click', onOk);
+		$modalEl.off('hidden.bs.modal', onHide);
+		$modalEl.off('keydown', onKey);
+	};
+
+	$okBtn.one('click', onOk);
+	$modalEl.one('hidden.bs.modal', onHide);
+	$modalEl.on('keydown', onKey);
+
+	bsModal.show();
 }
+
+/**
+ * Подтверждение действия
+ * options: { title, message, okLabel, okVariant } // okVariant: 'danger' | 'primary' | ...
+ */
+function confirmModal({ title = 'Подтверждение', message, okLabel = 'Подтвердить', okVariant = 'primary' } = {}) {
+	return new Promise((resolve) => {
+		showModal({
+			title,
+			bodyHTML: `<p class="mb-0">${escapeHtml(message)}</p>`,
+			okLabel,
+			okClass: `btn-${okVariant}`,
+			onConfirm: () => resolve(true),
+			onCancel: () => resolve(false),
+		});
+	});
+}
+
+async function deleteKey(id, label) {
+	const confirmed = await confirmModal({
+		title: translations[currentLang].deleteKey,
+		message: `${translations[currentLang].deleteKey} «${label || id}»? ${translations[currentLang].actionCantBeUndone}`,
+		okLabel: translations[currentLang].delete,
+		okVariant: 'danger'
+	});
+	if (!confirmed) return;
+
+	const storage = await getStorageArea();
+	const { apiKeys = {} } = await storage.get({ apiKeys: {} });
+	if (!(id in apiKeys)) return; // уже удалён или не найден
+
+	delete apiKeys[id];
+
+	await storage.set({ apiKeys });
+	renderKeys(apiKeys);
+}
+
 
 function renderKeys(apiKeys = null) {
-  	getStorageArea().then(storage => {
-    	const list = document.getElementById("keysList");
-    	list.innerHTML = "";
+	getStorageArea().then(storage => {
+		const $list = $("#keysList");
+		$list.empty();
 
-    	const showKeys = (data) => {
-	      	const keys = apiKeys || data.apiKeys;
-	      	for (const [id, { name, key }] of Object.entries(keys)) {
-	        	const item = document.createElement("div");
-	        	item.className = "key-item";
-	        	item.style.display = "flex";
-	        	item.style.alignItems = "center";
-		        item.style.justifyContent = "space-between";
-		        item.style.gap = "12px";
+		const showKeys = (data) => {
+			const keys = apiKeys ?? data?.apiKeys ?? {};
+			const ids = Object.keys(keys);
 
-		        const infoBlock = document.createElement("div");
-		        infoBlock.innerHTML = `<strong>${name}</strong> <small>(formId ${id})</small><br><span><code>${key.slice(0, 18)}***</code></span>`;
+			if (ids.length === 0) {
+				$list.append($("<div>").addClass("text-muted").text("Пока нет ключей"));
+				return;
+			}
 
-		        const actionsBlock = document.createElement("div");
-		        actionsBlock.style.display = "flex";
-		        actionsBlock.style.gap = "6px";
+			$.each(keys, (id, { name = "Без имени", key = "" }) => {
+				const $item = $("<div>")
+					.addClass("key-item d-flex align-items-center justify-content-between")
+					.css("gap", "12px");
 
-		        const editBtn = document.createElement("button");
-		        editBtn.className = "btn btn-outline-secondary editBtn";
-		        editBtn.title = translations[currentLang].edit;
-		        editBtn.innerHTML = `<i class="fa fa-pen"></i>`;
-		        editBtn.onclick = () => editKey(id);
+				const $infoBlock = $("<div>").append(
+					$("<strong>").text(name),
+					$("<small>").text(` (formId ${id})`),
+					$("<br>"),
+					$("<span>").append($("<code>").text(key.slice(0, 18) + "***"))
+				);
 
-		        const deleteBtn = document.createElement("button");
-		        deleteBtn.className = "btn btn-outline-danger deleteBtn";
-		        deleteBtn.title = translations[currentLang].delete;
-		        deleteBtn.innerHTML = `<i class="fa fa-trash"></i>`;
-		        deleteBtn.onclick = () => deleteKey(id);
+				const $actionsBlock = $("<div>")
+					.addClass("d-flex")
+					.css("gap", "6px");
 
-		        actionsBlock.appendChild(editBtn);
-		        actionsBlock.appendChild(deleteBtn);
-		        item.appendChild(infoBlock);
-		        item.appendChild(actionsBlock);
-		        list.appendChild(item);
-	      	}
-    	};
+				const $editBtn = $("<button>")
+					.addClass("btn btn-outline-secondary editBtn")
+					.attr("title", translations?.[currentLang]?.edit ?? "Edit")
+					.html('<i class="fa fa-pen"></i>')
+					.on("click", () => editKey(id));
 
-	    if (apiKeys) showKeys({ apiKeys });
-	    else storage.get({ apiKeys: {} }).then(showKeys);
-  	});
+				const $deleteBtn = $("<button>")
+					.addClass("btn btn-outline-danger deleteBtn")
+					.attr("title", translations?.[currentLang]?.delete ?? "Delete")
+					.html('<i class="fa fa-trash"></i>')
+					.on("click", () => deleteKey(id, name));
+
+				$actionsBlock.append($editBtn, $deleteBtn);
+				$item.append($infoBlock, $actionsBlock);
+				$list.append($item);
+			});
+		};
+
+		if (apiKeys) {
+			showKeys({ apiKeys });
+		} else {
+			storage.get({ apiKeys: {} }).then(showKeys);
+		}
+	});
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+
+$(() => {
 	getStorageArea().then(storage => {
 		storage.get(["selectedLang", "theme"], (result) => {
 			currentLang = result.selectedLang || (navigator.language.startsWith("uk") ? "ua" : "ru");
-			if (result.theme === "dark") document.body.classList.add("dark-theme");
+			if (result.theme === "dark") $("body").addClass("dark-theme");
 			updateLanguage();
 		});
 	});
 
-	const formIdEl = document.getElementById("formId");
-  	const apiKeyEl = document.getElementById("apiKey");
-  	const keyNameEl = document.getElementById("keyName");
+	const $formIdEl = $("#formId");
+	const $apiKeyEl = $("#apiKey");
+	const $keyNameEl = $("#keyName");
 
 	let apiKeyTimer = null;
 
-	apiKeyEl.addEventListener("input", () => {
+	$apiKeyEl.on("input", function () {
 		clearTimeout(apiKeyTimer);
-		const apiKey = apiKeyEl.value.trim();
-		if (apiKey.length === 0) {
-			apiKeyEl.classList.remove("is-invalid");
-		} else if (apiKey.length < 100) {
-			apiKeyEl.classList.add("is-invalid");
-			return;
-		} // минимальная длина для проверки
+		const apiKey = $(this).val().trim();
 
-		apiKeyTimer = setTimeout(async () => {
-			const formId = await extractFormInfo(apiKey);
-			if (formId) {
-				formIdEl.value = formId;
-				apiKeyEl.classList.remove("is-invalid");
-				apiKeyEl.classList.add("is-valid");
-				updateSaveButtonState();
-				keyNameEl.focus();
-			} else {
-				formIdEl.value = "";
-				updateSaveButtonState();
-			}
-		}, 600); // задержка 600 мс после ввода
+		if (apiKey.length === 0) $(this).removeClass("is-invalid");
+		else if ((apiKey.length > 0 && apiKey.length < 100) || apiKey.length > 100) $(this).addClass("is-invalid");
+		else if (apiKey.length === 100) {
+			apiKeyTimer = setTimeout(async function () {
+				const formId = await extractFormInfo(apiKey);
+				if (formId) {
+					$formIdEl.val(formId);
+					$(this).removeClass("is-invalid").addClass("is-valid");
+					updateSaveButtonState();
+					$keyNameEl.trigger("focus");
+				} else {
+					$formIdEl.val("");
+					updateSaveButtonState();
+				}
+			}, 600); // задержка 600 мс после ввода
+		}
 	});
 
 	async function extractFormInfo(apiKey) {
@@ -283,127 +446,160 @@ document.addEventListener("DOMContentLoaded", () => {
 	}
 
 	function updateSaveButtonState() {
-		const formIdFilled = formIdEl.value.trim() !== "";
-		const keyNameFilled = (keyNameEl.value.trim() !== "" && keyNameEl.value.trim().length > 2);
-		saveBtn.disabled = !(formIdFilled && keyNameFilled);
+		const formIdFilled = $formIdEl.val().trim() !== "";
+		const keyNameFilled = ($keyNameEl.val().trim() !== "" && $keyNameEl.val().trim().length > 2);
+		$saveBtn.prop("disabled", !(formIdFilled && keyNameFilled));
 	}
 
-	keyNameEl.addEventListener("input", () => {
-		const keyName = keyNameEl.value.trim();
-		if (keyName.length < 3) {
-			updateSaveButtonState();
-			keyNameEl.classList.add("is-invalid");
-		} else {
-			updateSaveButtonState();
-			keyNameEl.classList.replace("is-invalid", "is-valid");
-		}
+	$keyNameEl.on("input", function () {
+		const keyName = $(this).val().trim();
+		const isInvalid = keyName.length < 3;
+
+		$(this)
+			.toggleClass("is-invalid", isInvalid)
+			.toggleClass("is-valid", !isInvalid);
+
+		updateSaveButtonState();
 	});
 
-	const toggleBtn = document.getElementById("toggleKeysBtn");
-	const keysList = document.getElementById("keysList");
+	const $keysList = $("#keysList");
 
-	toggleBtn.addEventListener("click", () => {
-		const isVisible = keysList.style.maxHeight !== "0px";
+	const $toggleKeysBtn = $("#toggleKeysBtn");
+	$toggleKeysBtn.on("click", function () {
+		const isVisible = $keysList.css("maxHeight") !== "0px";
 
 		if (isVisible) {
-			keysList.style.maxHeight = "0px";
-			keysList.style.opacity = "0";
-			toggleBtn.textContent = "Показать сохранённые ключи ⬇";
-			toggleBtn.classList.replace("show", "hide");
+			$keysList.css({
+				maxHeight: "0px",
+				opacity: "0"
+			});
+			$toggleKeysBtn.text("Показать сохранённые ключи ⬇");
+			$toggleKeysBtn.removeClass("show").addClass("hide");
 		} else {
-			const scrollHeight = keysList.scrollHeight;
-			keysList.style.maxHeight = scrollHeight + "px";
-			keysList.style.opacity = "1";
-			toggleBtn.textContent = "Скрыть сохранённые ключи ⬆";
-			toggleBtn.classList.replace("hide", "show");
+			$keysList.css({
+				maxHeight: $keysList.prop("scrollHeight") + "px",
+				opacity: "1"
+			});
+			console.log($keysList.prop('scrollHeight')); // > 0?
+			$toggleKeysBtn.text("Скрыть сохранённые ключи ⬆");
+			$toggleKeysBtn.removeClass("hide").addClass("show");
 		}
 
-		const isHidden = toggleBtn.classList.contains("hide");
+		const isHidden = $toggleKeysBtn.hasClass("hide");
+		$toggleKeysBtn.toggleClass("hide show");
+		$toggleKeysBtn.text(!isHidden ? translations[currentLang].hideKeys : translations[currentLang].toggleKeysBtn);
 
-		toggleBtn.classList.toggle("hide");
-		toggleBtn.classList.toggle("show");
-
-		toggleBtn.textContent = !isHidden
-			? translations[currentLang].hideKeys
-			: translations[currentLang].toggleKeysBtn;
-
-		keysList.classList.toggle("open");
+		// $keysList.toggleClass("open");
 	});
 
-	langToggleBtn.addEventListener("click", () => {
-		let editBtns = document.querySelectorAll(".editBtn");
-		editBtns.forEach(editBtn => editBtn.title = translations[currentLang].edit);
-		let deleteBtns = document.querySelectorAll(".deleteBtn");
-		deleteBtns.forEach(deleteBtn => deleteBtn.title = translations[currentLang].delete);
+	$langToggleBtn.on("click", () => {
+		$(".editBtn").attr("title", translations[currentLang].edit);
+		$(".deleteBtn").attr("title", translations[currentLang].delete);
 	});
 
-	const saveBtn = document.getElementById("saveBtn")
-	saveBtn.addEventListener("click", () => {
-    	const formId = formIdEl.value.trim();
-    	const apiKey = apiKeyEl.value.trim();
-    	const keyName = keyNameEl.value.trim();
+	$keyNameEl.on("keydown", (e) => {
+		if (e.key === "Enter" && !$saveBtn.prop("disabled")) {
+			e.preventDefault(); // предотвращаем отправку формы
+			$saveBtn.trigger("click");    // имитируем нажатие кнопки
+		}
+	});
 
-    	if (!formId || !apiKey || !keyName) return;
+	const $saveBtn = $("#saveBtn");
+	$saveBtn.on("click", function () {
+		const formId = $formIdEl.val().trim();
+		const apiKey = $apiKeyEl.val().trim();
+		const keyName = $keyNameEl.val().trim();
 
-    	getStorageArea().then(storage => {
-	      	storage.get({ apiKeys: {} }).then(({ apiKeys }) => {
-	        	apiKeys[formId] = { name: keyName, key: apiKey };
-	        	storage.set({ apiKeys }).then(() => {
-	          		formIdEl.value = "";
-	          		apiKeyEl.value = "";
-	          		keyNameEl.value = "";
-	          		renderKeys(apiKeys);
-	        	});
-	      	});
-	    });
+		if (!formId || !apiKey || !keyName) {
+			showStatusMessage(translations[currentLang].fillAllRows, "warning");
+			return
+		}
+
+		getStorageArea().then(storage => {
+			storage.get({ apiKeys: {} }).then(({ apiKeys }) => {
+				apiKeys[formId] = { name: keyName, key: apiKey };
+				storage.set({ apiKeys }).then(() => {
+					$("#apiKey, #keyName").val("");
+					$('#formId')
+						.prop('readonly', false)
+						.val('')
+						.addClass('cleared') // Добавим эффект, если хочешь
+						.prop('readonly', true);
+					renderKeys(apiKeys);
+				})
+			});
+		});
 
 		showStatusMessage(translations[currentLang].succKeySaved, "success")
-		apiKeyEl.focus();
-  	});
-
-	keyNameEl.addEventListener("keydown", (e) => {
-		if (e.key === "Enter" && !saveBtn.disabled) {
-			e.preventDefault(); // предотвращаем отправку формы
-			saveBtn.click();    // имитируем нажатие кнопки
-		}
+		$apiKeyEl.trigger("focus");
 	});
 
-	document.getElementById("clearAllBtn").addEventListener("click", () => {
-  		if (!confirm(translations[currentLang].removeAllApiKeys)) return;
-    	getStorageArea().then(storage => storage.set({ apiKeys: {} }).then(() => renderKeys({})));
+	$("#clearAllBtn").on("click", () => {
+		if (!confirm(translations[currentLang].removeAllApiKeys)) return;
+		getStorageArea().then(storage => storage.set({ apiKeys: {} }).then(() => renderKeys({})));
 		showStatusMessage(translations[currentLang].allKeysCleared, "success")
-  	});
+	});
 
-  	document.getElementById("exportBtn").addEventListener("click", () => {
-    	getStorageArea().then(storage => {
-      		storage.get({ apiKeys: {} }).then(({ apiKeys }) => {
-		        const blob = new Blob([JSON.stringify(apiKeys, null, 2)], { type: "application/json" });
-		        const url = URL.createObjectURL(blob);
-		        const a = document.createElement("a");
-		        a.href = url;
-		        a.download = "apiKeys.json";
-		        a.click();
-		        URL.revokeObjectURL(url);
-      		});
-    	});
-  	});
+	$("#exportBtn").on("click", () => {
+		getStorageArea().then(storage => {
+			storage.get({ apiKeys: {} }).then(({ apiKeys }) => {
+				const blob = new Blob([JSON.stringify(apiKeys, null, 2)], { type: "application/json" });
+				const url = URL.createObjectURL(blob);
+				$("<a>", {
+					href: url,
+					download: "apiKeys.json"
+				})[0].click();
+				URL.revokeObjectURL(url);
+				showStatusMessage(translations[currentLang].exportKeysSuccess, "success")
+			});
+		});
+	});
 
-  	document.getElementById("importBtn").addEventListener("click", () => {
-		hiddenFileInput.click();
-  	});
+	$("#importBtn").on("click", () => {
+		$hiddenFileInput.trigger("click");
+	});
 
-	hiddenFileInput.addEventListener('change', (event) => {
-		const file = event.target.files[0];
+	function isValidApiKeys(obj) {
+		if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) return false;
+		return Object.keys(obj).every((k) => {
+			const v = obj[k];
+			return typeof v === 'string' || (v && typeof v === 'object' && typeof v.key === 'string');
+		});
+	}
+
+	$hiddenFileInput.on('change', (event) => {
+		const file = event.target?.files[0];
 		if (!file) return;
 
+		const isJsonByName = /\.json$/i.test(file.name);
+		const isJsonByType = file.type === 'application/json' || file.type === '';
+		const MAX_SIZE = 2 * 1024 * 1024; // 2 MB
+
+		if (!isJsonByName && !isJsonByType) {
+			showStatusMessage(translations[currentLang].selectJsonFile, 'error');
+			this.value = '';
+			return;
+		}
+		if (file.size > MAX_SIZE) {
+			showStatusMessage(translations[currentLang].file2Large, 'error');
+			this.value = '';
+			return;
+		}
+
 		const reader = new FileReader();
-		reader.onload = (e) => {
+		reader.onload = (ev) => {
 			try {
-				const parsed = JSON.parse(e.target.result);
+				const parsed = JSON.parse(ev.target.result);
+
+				if (!isValidApiKeys(parsed)) throw new Error(translations[currentLang].incorrectStruct);
+
 				showPreview(parsed); // твоя функция предпросмотра
+				showStatusMessage(translations[currentLang].fileLoaded, 'info');
 			} catch (err) {
 				console.error('Ошибка при парсинге JSON:', err);
-				// можно показать сообщение об ошибке
+				showStatusMessage(translations[currentLang].errWhileReadJson, 'error');
+			} finally {
+				$hiddenFileInput.val('');
 			}
 		};
 		reader.readAsText(file);
@@ -411,89 +607,90 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	renderKeys();
 
-  	let previewData = null;
+	let previewData = null;
 
 	function showPreview(importedKeys) {
-	  	getStorageArea().then(storage => {
-	    	storage.get({ apiKeys: {} }).then(({ apiKeys: existingKeys }) => {
-	      		const container = document.getElementById("previewContainer");
-	      		const list = document.getElementById("previewList");
-	      		list.innerHTML = "";
+		getStorageArea().then(storage => {
+			storage.get({ apiKeys: {} }).then(({ apiKeys: existingKeys }) => {
+				const $container = $("#previewContainer");
+				const $list = $("#previewList");
+				$list.empty();
 
-	      		previewData = { importedKeys, existingKeys };
+				previewData = { importedKeys, existingKeys };
 
-	      		for (const [id, { name, key }] of Object.entries(importedKeys)) {
-	        		const exists = existingKeys[id];
-	        		const isSame = exists && exists.key === key && exists.name === name;
+				for (const [id, { name, key }] of Object.entries(importedKeys)) {
+					const exists = existingKeys[id];
+					const isSame = exists && exists.key === key && exists.name === name;
 
-			        const label = exists
-			          	? isSame
-			            	? "(уже есть)"
-			            	: "(будет обновлено)"
-			          	: "(новый)";
+					const label = exists
+						? isSame
+							? translations[currentLang].exists
+							: translations[currentLang].beUpdated
+						: translations[currentLang].new;
 
-			        const row = document.createElement("div");
-			        row.style.display = "flex";
-			        row.style.alignItems = "left";
-			        row.style.marginBottom = "6px";
-			        row.style.gap = "8px";
-					row.className = "form-check form-switch";
+					const $row = $("<div>", {
+						class: "form-check form-switch",
+						css: {
+							display: "flex",
+							alignItems: "left",
+							marginBottom: "6px",
+							gap: "8px"
+						}
+					});
 
-			        const checkbox = document.createElement("input");
-			        checkbox.type = "checkbox";
-					checkbox.className = "form-check-input";
-					checkbox.role="switch"
-			        checkbox.checked = true;
-			        checkbox.dataset.id = id;
+					const $checkbox = $("<input>", {
+						class: "form-check-input",
+						type: "checkbox",
+						role: "switch",
+						checked: true,
+					}).attr("data-id", id);
 
-			        const text = document.createElement("div");
-			        text.innerHTML = `<strong>${name}</strong> <small>(formId ${id})</small>:<br /> <code>${key.slice(0, 18)}</code> <span style="color:gray;">${label}</span>`;
+					const $text = $("<div>").html(`<strong>${name}</strong> <small>(formId ${id})</small>:<br /> <code>${key.slice(0, 18)}</code> <span style="color:gray;">${label}</span>`);
+					$row.append($checkbox).append($text);
+					$list.append($row);
+				}
 
-			        row.appendChild(checkbox);
-			        row.appendChild(text);
-			        list.appendChild(row);
-	      		}
-
-	      		container.style.display = "block";
-	    	});
-	  	});
+				$container.show()
+			});
+		});
 	}
 
-	document.getElementById("confirmImportBtn").addEventListener("click", () => {
-	  	if (!previewData) return;
+	$("#confirmImportBtn").on("click", () => {
+		if (!previewData) return;
 
-	  	const { importedKeys, existingKeys } = previewData;
-	  	const selected = {};
+		const { importedKeys, existingKeys } = previewData;
+		const selected = {};
 
-	  	document.querySelectorAll("#previewList input[type=checkbox]").forEach(cb => {
-	    	if (cb.checked) {
-	      		const id = cb.dataset.id;
-	      		selected[id] = importedKeys[id];
-	    	}
-	  	});
+		$("#previewList input[type=checkbox]:checked").each(function () {
+			const id = $(this).attr("data-id");
+			selected[id] = importedKeys[id];
+		});
 
-	  	const merged = { ...existingKeys, ...selected };
+		const merged = $.extend({}, existingKeys, selected);
+		const $btn = $(this).prop("disabled", true);
 
-	  	getStorageArea().then(storage => {
-	    	storage.set({ apiKeys: merged }).then(() => {
-	      		renderKeys(merged);
-	      		document.getElementById("previewContainer").style.display = "none";
-	      		previewData = null;
-	      		showStatusMessage(translations[currentLang].importedKeysSaved, "info");
-	    	});
-	  	});
+		getStorageArea().then(storage => {
+			storage.set({ apiKeys: merged }).then(() => {
+				renderKeys(merged);
+				$("#previewContainer").hide();
+				previewData = null;
+				showStatusMessage(translations[currentLang].importedKeysSaved, "success");
+			}).finally(() => {
+				$btn.prop("disabled", false);
+			});
+		});
 	});
 
-	document.getElementById("selectAllBtn").addEventListener("click", () => {
-	  	document.querySelectorAll("#previewList input[type=checkbox]").forEach(cb => cb.checked = true);
+	$(document).on("click", "#selectAllBtn", () => {
+		$("#previewList input[type=checkbox]").prop("checked", true)
 	});
 
-	document.getElementById("deselectAllBtn").addEventListener("click", () => {
-	  	document.querySelectorAll("#previewList input[type=checkbox]").forEach(cb => cb.checked = false);
+	$(document).on("click", "#deselectAllBtn", () => {
+		$("#previewList input[type=checkbox]").prop("checked", false)
 	});
 
-	document.getElementById("cancelImportBtn").addEventListener("click", () => {
-	  	document.getElementById("previewContainer").style.display = "none";
-	  	previewData = null;
+	$(document).on("click", "#cancelImportBtn", () => {
+		$("#previewContainer").hide();
+		previewData = null;
 	});
-});
+})

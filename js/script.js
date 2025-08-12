@@ -1,4 +1,4 @@
-(function() {
+(function () {
     'use strict';
 
     const formId = new URLSearchParams(window.location.search).get("formId") || "1";
@@ -12,10 +12,10 @@
             return chrome.storage.local;
         }
     }
-    
+
     let apiKey = null;
     getStorageArea().then(storage => {
-        storage.get({ apiKeys: {} }).then(data => {
+        storage.get({apiKeys: {}}).then(data => {
             const apiKeys = data.apiKeys;
             apiKey = apiKeys[formId]?.key;
         });
@@ -53,9 +53,9 @@
     document.head.appendChild(style);
 
     const statusMapping = {
-        "1": { paid: 5, returned: 7 },
-        "2": { paid: 14, returned: 16 },
-        "3": { paid: 23, returned: 25 }
+        "1": {paid: 5, returned: 7},
+        "2": {paid: 14, returned: 16},
+        "3": {paid: 23, returned: 25}
     };
 
     const filters = [
@@ -125,7 +125,7 @@
             to += " 23:59:59";
         }
 
-        return { from, to };
+        return {from, to};
     }
 
     function setCookie(name, value, minutes = 15) {
@@ -146,23 +146,23 @@
         const cachedAmount = getCookie(amountKey);
 
         if (cachedCount !== null && cachedAmount !== null) {
-            return { count: cachedCount, paymentAmount: cachedAmount };
+            return {count: cachedCount, paymentAmount: cachedAmount};
         }
-        
+
         const url = `https://kompikok.salesdrive.me/api/order/list/?limit=1${query}`;
         try {
             const res = await fetch(url, {
-                headers: { "Form-Api-Key": apiKey }
+                headers: {"Form-Api-Key": apiKey}
             });
             const json = await res.json();
             const count = json?.totals?.count ?? "-";
             const amount = json?.totals?.paymentAmount ?? "-";
             setCookie(countKey, count, 15);
             setCookie(amountKey, amount, 15);
-            return { count, paymentAmount: amount };
+            return {count, paymentAmount: amount};
         } catch (e) {
             console.error("Ошибка API:", e);
-            return { count: "-", paymentAmount: "-" };
+            return {count: "-", paymentAmount: "-"};
         }
     }
 
@@ -181,11 +181,11 @@
             let url = `https://kompikok.salesdrive.me/ua/index.html?formId=${formId}#/order/index`;
             let query = "";
             const statusId = filter.statusKey
-              ? statusMapping[formId]?.[filter.statusKey] || filter.statusId
-              : filter.statusId;
+                ? statusMapping[formId]?.[filter.statusKey] || filter.statusId
+                : filter.statusId;
 
             if (!filter.custom) {
-                const { from, to } = getMonthRange(filter.offset, filter.time);
+                const {from, to} = getMonthRange(filter.offset, filter.time);
                 query += `&filter[statusId]=${statusId}`;
                 query += `&filter[${filter.dateField}][from]=${encodeURIComponent(from)}`;
                 query += `&filter[${filter.dateField}][to]=${encodeURIComponent(to)}`;
@@ -286,7 +286,7 @@
                             : filter["statusId"];
 
                         if (!filter.custom) {
-                            const { from, to } = getMonthRange(filter.offset, filter.time);
+                            const {from, to} = getMonthRange(filter.offset, filter.time);
                             query += `&filter[statusId]=${statusId}`;
                             query += `&filter[${filter.dateField}][from]=${encodeURIComponent(from)}`;
                             query += `&filter[${filter.dateField}][to]=${encodeURIComponent(to)}`;

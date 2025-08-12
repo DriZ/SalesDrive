@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
   	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+		<script src="js/jquery.min.js" type="application/javascript"></script>
+		<script src="js/bootstrap.bundle.min.js" type="application/javascript"></script>
 		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 		<style>
 	  		body {
@@ -38,16 +40,32 @@
 			    gap: 8px;
 			}
 
-			#statusMessage.show {
-				display: block;
-				opacity: 1;
-			}
+			/*#statusMessage.show {*/
+			/*	display: block;*/
+			/*	opacity: 1;*/
+			/*}*/
 
-			#statusMessage.hide {
+			/*#statusMessage.hide {*/
+			/*	display: none;*/
+			/*	opacity: 0;*/
+			/*	transition: opacity 0.5s ease;*/
+			/*}*/
+
+			.status-box {
 				display: none;
-				opacity: 0;
-				transition: opacity 0.5s ease;
+				padding: 10px 12px;
+				border: 1px solid transparent;
+				border-radius: 8px;
+				font-size: 14px;
+				line-height: 1.4;
+				max-width: 100%;
 			}
+			.status-icon { margin-right: 8px; }
+
+			.status--success { background: #d1e7dd; color: #0f5132; border-color: #badbcc; }
+			.status--error   { background: #f8d7da; color: #842029; border-color: #f5c2c7; }
+			.status--info    { background: #cff4fc; color: #055160; border-color: #b6effb; }
+			.status--warning { background: #fff3cd; color: #664d03; border-color: #ffecb5; }
 
 			body.dark-theme {
 				background-color: #1e1e1e;
@@ -135,8 +153,56 @@
 				margin-right: 16px;
 				margin-top: 16px;
 			}
+			body.dark-theme .modal-content {
+				background-color: #2c2c2c;
+				color: #f0f0f0;
+				border: 1px solid #444;
+			}
+			body.dark-theme .modal-header,
+			body.dark-theme .modal-footer {
+				border-color: #444;
+			}
+			body.dark-theme .modal-title {
+				color: #f0f0f0;
+			}
+			body.dark-theme .modal-body {
+				color: #e6e6e6;
+			}
+
+			/* Кнопка закрытия (иконка крестика) */
+			body.dark-theme .btn-close {
+				filter: invert(1) grayscale(100%);
+				opacity: .8;
+			}
+			body.dark-theme .btn-close:hover {
+				opacity: 1;
+			}
+
+			/* Бэкдроп можно сделать чуть плотнее на темном фоне */
+			body.dark-theme .modal-backdrop.show {
+				opacity: .75; /* дефолт ~.5 */
+			}
+
+			/* Элементы форм внутри модалки, чтобы были в одном стиле */
+			body.dark-theme .modal-content input,
+			body.dark-theme .modal-content button,
+			body.dark-theme .modal-content select,
+			body.dark-theme .modal-content textarea {
+				background-color: #2c2c2c;
+				color: #f0f0f0;
+				border-color: #444;
+			}
+
+			/* Фокусные состояния (видимый контур на темном фоне) */
+			body.dark-theme .modal-content .form-control:focus,
+			body.dark-theme .modal-content .form-select:focus,
+			body.dark-theme .modal-content .btn:focus {
+				box-shadow: 0 0 0 .2rem rgba(255,255,255,.15);
+				border-color: #666;
+			}
 		</style>
-  	</head>
+		<title>SalesDrive Tools</title>
+	</head>
   	<body>
 		<div class="header d-flex align-items-center justify-content-between">
 			<div class="header-left d-flex align-items-center">
@@ -157,6 +223,32 @@
 				</div>
 			</div>
 		</div>
+		<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+			<div class="modal-dialog modal-dialog-centered">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title">Подтверждение</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+					</div>
+					<div class="modal-body">
+						<form id="editForm" class="d-none">
+							<div class="mb-2">
+								<label for="editName" class="form-label" id="editNameText">Имя ключа</label>
+								<input type="text" class="form-control" id="editName" required>
+							</div>
+							<div class="mb-2">
+								<label for="editValue" class="form-label">API-ключ</label>
+								<input type="text" class="form-control" id="editValue" required>
+							</div>
+						</form>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" id="cancel">Отмена</button>
+						<button type="button" class="btn btn-danger" id="confirmModalOk">Удалить</button>
+					</div>
+				</div>
+			</div>
+		</div>
 		<div class="px-2 has-validation">
 			<label for="apiKey" class="form-label" id="addApiKeyText">Добавить API-ключ</label>
 			<input type="text" id="apiKey" class="form-control" placeholder="API ключ">
@@ -172,16 +264,11 @@
 			<label for="formId" class="form-label">Form ID</label>
 			<input type="text" id="formId" class="form-control" placeholder="Заполнится автоматически" readonly>
 		</div>
-		<div id="statusMessage" style="
-			display: none;
-			font-size: 0.9em;
-			margin-bottom: 8px;
-			padding: 6px 10px;
-			border-radius: 4px;
-			transition: opacity 0.3s ease;
-		">
-			<span id="statusIcon" style="margin-right: 6px;"></span>
-			<span id="statusText"></span>
+		<div class="px-2 mb-2">
+			<div class="px-2 my-2 status-box" id="statusMessage" style="display: none;">
+				<span class="status-icon" id="statusIcon" style="margin-right: 6px;"></span>
+				<span class="status-text" id="statusText"></span>
+			</div>
 		</div>
 		<div class="px-2">
 			<button id="saveBtn" class="btn btn-primary" disabled>Сохранить</button>
