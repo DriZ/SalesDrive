@@ -1,6 +1,11 @@
 const $langToggleBtn = $("#langToggleBtn");
 const $themeToggleBtn = $("#themeToggleBtn");
 let currentLang = "ua";
+const isMac = navigator.platform.toUpperCase().includes('MAC');
+const modifierKey = isMac ? '⌘' : 'Ctrl';
+const delKey = isMac ? '⌫' : 'Del';
+const returnKey = isMac ? "Return" : "Enter";
+
 
 const $hiddenFileInput = $("<input>", {
 	type: "file",
@@ -42,7 +47,7 @@ const translations = {
 		exportBtn: "📤 Експорт JSON",
 		importBtn: "📥 Імпорт JSON",
 		keyNameText: "Назва ключа",
-		keyNamePlaceholder: "Введіть зрозуміле ім’я ключа",
+		editNamePlaceholder: "Введіть зрозуміле ім’я ключа",
 		formIdPlaceholder: "Заповниться автоматично",
 		previewText: "Перегляд ключів:",
 		selectAllBtn: "Обрати всі",
@@ -52,7 +57,7 @@ const translations = {
 		themeToggleBtn: "🌙 Змінити тему",
 		invalidKey: "Невірний ключ",
 		errWhileExtractKey: "Помилка при видобутті formId",
-		succKeySaved: "Ключ успішно збережено.",
+		keySaved: "Ключ успішно збережено.",
 		allKeysCleared: "Всі ключі успішно очищені.",
 		selectJsonFile: "Виберіть JSON-файл для импорту.",
 		errWhileReadJson: "Помилка при читанні JSON-файлу.",
@@ -65,7 +70,7 @@ const translations = {
 		exportKeysSuccess: "Ключі успішно експортовані",
 		removeAllApiKeys: "Ви дійсно хочете видалити всі API ключі?",
 		actionCantBeUndone: "Цю дію не можна скасувати.",
-		fillAllRows: "Заповніть всі поля",
+		fillAllFields: "Заповніть всі поля",
 		file2Large: "Файл занадто великий. Максимум 2 MB",
 		fileLoaded: "Файл завантажений. Перегляньте перед імпортом",
 		incorrectStruct: "Неправильна структура apiKeys",
@@ -73,7 +78,10 @@ const translations = {
 		beUpdated: "Буде оновлено",
 		new: "Новий",
 		editNameText: "Назва ключа",
-		cancel: "Відміна",
+		cancel: "Скасувати",
+		noneKeysYet: "Поки немає ключів...",
+		addKey: "Додати API ключ",
+		fillAuto: "Заповниться автоматично",
 	},
 	ru: {
 		toggleKeysBtn: "Показать сохранённые ключи ⬇",
@@ -87,7 +95,7 @@ const translations = {
 		exportBtn: "📤 Экспорт JSON",
 		importBtn: "📥 Импорт JSON",
 		keyNameText: "Имя ключа",
-		keyNamePlaceholder: "Введите понятное имя ключа",
+		editNamePlaceholder: "Введите понятное имя ключа",
 		formIdPlaceholder: "Заполнится автоматически",
 		previewText: "Предпросмотр ключей:",
 		selectAllBtn: "Выбрать все",
@@ -97,7 +105,7 @@ const translations = {
 		themeToggleBtn: "🌙 Сменить тему",
 		invalidKey: "Неверный ключ",
 		errWhileExtractKey: "Ошибка при извлечении formId",
-		succKeySaved: "Ключ успешно сохранен.",
+		keySaved: "Ключ успешно сохранен.",
 		allKeysCleared: "Все ключи успешно очищены.",
 		selectJsonFile: "Выберите JSON-файл для импорта.",
 		errWhileReadJson: "Ошибка при чтении JSON-файла.",
@@ -119,6 +127,9 @@ const translations = {
 		new: "Новый",
 		editNameText: "Имя ключа",
 		cancel: "Отмена",
+		noneKeysYet: "Пока нет ключей...",
+		addKey: "Добавить API ключ",
+		fillAuto: "Заполнится автоматически",
 	}
 };
 
@@ -147,17 +158,23 @@ function updateLanguage() {
 	}
 }
 
+function getFormTemplate() {
+	return $('#editFormTemplate form').clone();
+}
+
 $langToggleBtn.on("click", () => {
 	currentLang = currentLang === "ua" ? "ru" : "ua";
 	getStorageArea().then(storage => storage.set({ selectedLang: currentLang }))
 	updateLanguage();
 });
 
+/**
+ * Всплывающие уведомления
+ * @param message // текст уведомления
+ * @param type // тип уведомления success | info | error | danger
+ * @param duration // время исчезновения
+ */
 function showStatusMessage(message, type = 'info', duration = 5000) {
-	const $box  = $('#statusMessage');
-	const $icon = $('#statusIcon');
-	const $text = $('#statusText');
-
 	const icons = {
 		success: '✅',
 		error:   '❌',
@@ -165,29 +182,45 @@ function showStatusMessage(message, type = 'info', duration = 5000) {
 		warning: '⚠️'
 	};
 
-	// Текст и иконка
-	$text.text(message);
-	$icon.text(icons[type] || icons.info);
+	const toastId = `toast-${Date.now()}`;
+	const $toast = $(`
+        <div id="${toastId}" class="toast-item text-bg-${type}" style="
+            min-width: 250px;
+            margin-bottom: 10px;
+            padding: 12px 16px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            user-select: none;
+            position: relative;
+        ">
+            <span class="me-2">${icons[type] || icons.info}</span>${message}
+            <button class="btn-close float-end" style="opacity: 0.8;"></button>
+        </div>
+    `);
 
-	// Цветовая схема через классы
-	$box
-		.removeClass('status--success status--error status--info status--warning')
-		.addClass(`status--${type}`);
+	$('#toastContainer').append($toast);
 
-	// Остановить прошлые анимации и таймер
-	$box.stop(true, true).fadeIn(150);
-	const prevTimer = $box.data('hideTimer');
-	if (prevTimer) clearTimeout(prevTimer);
-
-	// Авто-скрытие
-	const hideTimer = setTimeout(() => {
-		$box.fadeOut(300);
+	// Авто-удаление
+	const timer = setTimeout(() => {
+		$toast.fadeOut(300, () => $toast.remove());
 	}, duration);
 
-	$box.data('hideTimer', hideTimer);
+	// Закрытие вручную
+	$toast.find('.btn-close').on('click', () => {
+		clearTimeout(timer);
+		$toast.fadeOut(200, () => $toast.remove());
+	});
 }
 
-// По желанию: клик по сообщению — сразу скрыть
+/**
+ * Создание бейджа с хоткеями
+ * @param keys
+ * @returns {string}
+ */
+function createBadge(...keys) {
+	return `<span class="badge bg-primary">${keys.join("+")}</span>`;
+}
+
 $(document).on('click', '#statusMessage', function () {
 	const $box = $(this);
 	const t = $box.data('hideTimer');
@@ -195,6 +228,88 @@ $(document).on('click', '#statusMessage', function () {
 	$box.stop(true, true).fadeOut(150);
 });
 
+/**
+ * Проверка валидности апи ключа и извлечение formId
+ * @param apiKey
+ * @returns {Promise<string|null>}
+ */
+async function extractFormInfo(apiKey) {
+	try {
+		const response = await fetch("https://kompikok.salesdrive.me/api/order/list/?limit=1", {
+			method: "GET",
+			headers: {
+				"Form-Api-Key": apiKey
+			}
+		});
+
+		if (!response.ok) throw new Error(translations[currentLang].invalidKey);
+
+		const linkHeader = response.headers.get("Link");
+		if (!linkHeader) throw new Error(translations[currentLang].invalidKey);
+
+		const matchFormId = linkHeader.match(/formId=([^&]+)/);
+		return matchFormId?.[1] || null;
+	} catch (e) {
+		showStatusMessage(`${translations[currentLang].errWhileExtractKey}: ${e.message}`, "error")
+		return null;
+	}
+}
+
+/**
+ * Добавление нового апи ключа
+ */
+async function addKey() {
+	showModal({
+		title: translations[currentLang].addKey,
+		bodyHTML: () => getFormTemplate(),
+		okLabel: translations[currentLang].saveBtn,
+		onConfirm: async () => {
+			const $form = $('#confirmModal').find("form");
+			const name = $form.find('#editName').val().trim();
+			const key = $form.find('#editValue').val().trim();
+
+			if (!name || !key) {
+				showStatusMessage(translations[currentLang].fillAllFields, 'warning');
+				return;
+			}
+
+			const formId = await extractFormInfo(key);
+			if (!formId) {
+				showStatusMessage(translations[currentLang].invalidKey, 'danger');
+				return;
+			}
+
+			const storage = await getStorageArea();
+			const { apiKeys = {} } = await storage.get({ apiKeys: {} });
+
+			apiKeys[formId] = { name, key };
+
+			await storage.set({ apiKeys });
+			renderKeys(apiKeys);
+			showStatusMessage(translations[currentLang].keySaved, 'success');
+		}
+	});
+
+	// Вставка формы и автофокус
+	setTimeout(() => {
+		$('#confirmModal').one('shown.bs.modal', function () {
+			injectFormIntoModal({
+				values: {
+					editName: '',
+					editValue: ''
+				},
+				focusSelector: '#editValue',
+				onReady: ($form) => validateForm($form)
+			});
+			$("#editValue").trigger("focus");
+		});
+	}, 50);
+}
+
+/**
+ * Редактирование апи ключа
+ * @param id
+ */
 async function editKey(id) {
 	const storage = await getStorageArea();
 	const { apiKeys = {} } = await storage.get({ apiKeys: {} });
@@ -202,10 +317,10 @@ async function editKey(id) {
 
 	showModal({
 		title: `${translations[currentLang].editKey} «${current.name}»`,
-		bodyHTML: $('#editForm').prop("outerHTML"),
+		bodyHTML: () => getFormTemplate(),
 		okLabel: translations[currentLang].saveBtn,
 		onConfirm: async () => {
-			const $form = $('#editForm');
+			const $form = $('#confirmModal').find("form");
 			const name = $form.find('#editName').val().trim();
 			const key = $form.find('#editValue').val().trim();
 
@@ -214,21 +329,121 @@ async function editKey(id) {
 			apiKeys[id] = { name, key };
 			await storage.set({ apiKeys });
 			renderKeys(apiKeys);
+			showStatusMessage(translations[currentLang].keySaved, 'success');
 		}
 	});
 
 	// Заполнить форму данными (после .show)
 	setTimeout(() => {
-		const $form = $('#editForm');
-		if ($form.length) {
-			$form.removeClass('d-none');
-			$form.find('#editName').val(current.name);
-			$form.find('#editValue').val(current.key);
-		}
+		$('#confirmModal').one('shown.bs.modal', function () {
+			injectFormIntoModal({
+				values: {
+					editName: current.name,
+					editValue: current.key
+				},
+				focusSelector: '#editName',
+				onReady: ($form) => validateForm($form)
+			});
+			$("#editValue").trigger("focus");
+		});
 	}, 50);
 }
 
-// Небольшой эскейп, чтобы безопасно подставлять названия в HTML
+/**
+ * Валидация полей в модалке
+ * @param $form // селектор формы
+ */
+function validateForm($form) {
+	const $apiKeyEl = $form.find('#editValue');
+	const $keyNameEl = $form.find('#editName');
+
+	let apiKeyTimer = null;
+	$apiKeyEl.on("input", function () {
+		clearTimeout(apiKeyTimer);
+		const apiKey = $(this).val().trim();
+
+		if (apiKey.length === 0) {
+			$(this).removeClass("is-invalid is-valid");
+			updateSaveButtonState("#confirmModal");
+			if ($form.find("#formId").length) $form.find('#formId').val("");
+			return;
+		}
+
+		if (apiKey.length !== 100) {
+			$(this).removeClass("is-valid").addClass("is-invalid");
+			updateSaveButtonState("#confirmModal");
+			if ($form.find("#formId").length) $form.find('#formId').val("");
+			return;
+		}
+
+		$("#apiKeyLoader").fadeIn(150);
+
+		apiKeyTimer = setTimeout(async () => {
+			const formId = await extractFormInfo(apiKey);
+			$("#apiKeyLoader").fadeOut(150);
+
+			if (formId) {
+				if (!$form.find('#formId').length) {
+					$form.append(`
+						<div class="mb-2">
+							<label for="formId" class="form-label">Form ID</label>
+							<input type="text" class="form-control" id="formId" placeholder="${translations[currentLang].fillAuto}" readonly>
+						</div>
+					`);
+				}
+				$form.find('#formId').val(formId);
+				$(this).removeClass("is-invalid").addClass("is-valid");
+				$keyNameEl.trigger("focus");
+			} else {
+				$form.find('#formId').val('');
+				$(this).removeClass("is-valid").addClass("is-invalid");
+			}
+
+			updateSaveButtonState('#confirmModal');
+		}, 600);
+	});
+
+	$keyNameEl.on("input", function () {
+		const keyName = $(this).val().trim();
+		const isInvalid = keyName.length < 3;
+
+		$(this)
+			.toggleClass("is-invalid", isInvalid)
+			.toggleClass("is-valid", !isInvalid);
+
+		updateSaveButtonState("#confirmModal");
+	});
+
+	function updateSaveButtonState(containerSelector = 'body') {
+		const $container = $(containerSelector);
+
+		const $apiKeyEl = $container.find('#editValue');
+		const $keyNameEl = $container.find('#editName');
+		const $saveBtn = $container.find('#confirmModalOk');
+
+		const apiKey = $apiKeyEl.val()?.trim() || '';
+		const keyName = $keyNameEl.val()?.trim() || '';
+
+		const isApiKeyValid = apiKey.length === 100;
+		const isKeyNameValid = keyName.length >= 3;
+		const isFormValid = isApiKeyValid && isKeyNameValid;
+
+		$saveBtn.prop('disabled', !isFormValid);
+		$saveBtn
+			.toggleClass('btn-success', isFormValid)
+			.toggleClass('btn-primary', !isFormValid)
+			.html(isFormValid
+				? `<i class="fas fa-check me-1"></i>${translations[currentLang].saveBtn}`
+				: translations[currentLang].saveBtn);
+	}
+	$("#confirmModalOk").prop('disabled', true);
+}
+
+/**
+ * Небольшой эскейп, чтобы безопасно подставлять названия в HTML
+ * @param str
+ * @returns {string}
+ */
 function escapeHtml(str = '') {
 	return String(str)
 		.replaceAll('&', '&amp;')
@@ -236,6 +451,39 @@ function escapeHtml(str = '') {
 		.replaceAll('>', '&gt;')
 		.replaceAll('"', '&quot;')
 		.replaceAll("'", '&#39;');
+}
+
+/**
+ * Вставляем body в модалку
+ * @param values // значения полей модалки
+ * @param focusSelector // селектор, куда нужно поставить фокус
+ * @param onReady // вызов функции после вставки
+ */
+function injectFormIntoModal({ values = {}, focusSelector, onReady }) {
+	const $modalBody = $('#confirmModal .modal-body');
+	const $form = $modalBody.find('form');
+
+	if (!$form.length) {
+		console.warn('Форма не найдена в модалке');
+		return;
+	}
+
+	$form.removeClass('d-none');
+
+	// Заполнение значений
+	for (const [key, value] of Object.entries(values)) {
+		$form.find(`#${key}`).val(value);
+	}
+
+	// Автофокус
+	if (focusSelector) {
+		$form.find(focusSelector).trigger('focus');
+	}
+
+	// Дополнительные действия
+	if (typeof onReady === 'function') {
+		onReady($form);
+	}
 }
 
 /**
@@ -247,6 +495,9 @@ function showModal({ title, bodyHTML, okLabel = 'ОК', okClass = 'btn-primary',
 	const modalEl = $modalEl[0];
 	const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
 
+	const $modalBody = $modalEl.find('.modal-body');
+	$modalBody.empty();
+
 	// Темизация
 	modalEl.setAttribute(
 		'data-bs-theme',
@@ -254,10 +505,12 @@ function showModal({ title, bodyHTML, okLabel = 'ОК', okClass = 'btn-primary',
 	);
 
 	$modalEl.find('.modal-title').text(title);
-	$modalEl.find('.modal-body').html(bodyHTML);
 
 	const $okBtn = $modalEl.find('#confirmModalOk');
-	$okBtn.text(okLabel).attr('class', `btn ${okClass}`);
+	$okBtn.html(`${okLabel} ${createBadge(returnKey)}`).attr('class', `btn ${okClass}`);
+
+	const $cancelBtn = $modalEl.find("#cancel");
+	$cancelBtn.html(`${$cancelBtn.text()} ${createBadge("Esc")}`);
 
 	const onOk = function () {
 		cleanup();
@@ -289,6 +542,19 @@ function showModal({ title, bodyHTML, okLabel = 'ОК', okClass = 'btn-primary',
 	$modalEl.one('hidden.bs.modal', onHide);
 	$modalEl.on('keydown', onKey);
 
+	$modalEl.one('shown.bs.modal', function () {
+		if (typeof bodyHTML === 'function') {
+			const content = bodyHTML();
+			if (typeof content === 'string') {
+				$modalBody.html(content);
+			} else if (content instanceof jQuery || content instanceof HTMLElement) {
+				$modalBody.append(content);
+			}
+		} else {
+			$modalBody.html(bodyHTML);
+		}
+	});
+
 	bsModal.show();
 }
 
@@ -309,6 +575,11 @@ function confirmModal({ title = 'Подтверждение', message, okLabel =
 	});
 }
 
+/**
+ * Функция удаления ключа
+ * @param id // id удаляемого ключа
+ * @param label // Имя удаляемого ключа
+ */
 async function deleteKey(id, label) {
 	const confirmed = await confirmModal({
 		title: translations[currentLang].deleteKey,
@@ -328,6 +599,20 @@ async function deleteKey(id, label) {
 	renderKeys(apiKeys);
 }
 
+async function deleteAllKeys() {
+	const confirmed = await confirmModal({
+		title: translations[currentLang].clearAllBtn,
+		message: translations[currentLang].removeAllApiKeys + " " + translations[currentLang].actionCantBeUndone,
+		okLabel: translations[currentLang].delete,
+		okVariant: 'danger'
+	});
+	if (!confirmed) return;
+
+	const storage = await getStorageArea()
+	await storage.set({ apiKeys: {} });
+	renderKeys({});
+	showStatusMessage(translations[currentLang].allKeysCleared, "success")
+}
 
 function renderKeys(apiKeys = null) {
 	getStorageArea().then(storage => {
@@ -338,8 +623,16 @@ function renderKeys(apiKeys = null) {
 			const keys = apiKeys ?? data?.apiKeys ?? {};
 			const ids = Object.keys(keys);
 
+			const addKeyBtn = $("<button>")
+				.addClass("btn btn-outline-secondary")
+				.attr("id", "addBtn")
+				.attr("title", translations[currentLang].addKey ?? "Add API Key")
+				.html(`<i class="fa fa-plus"></i> ${translations[currentLang].addKey} ${createBadge(modifierKey, "N")}`)
+				.on("click", () => addKey());
+			$list.append(addKeyBtn);
+
 			if (ids.length === 0) {
-				$list.append($("<div>").addClass("text-muted").text("Пока нет ключей"));
+				$list.append($("<div>").text(translations[currentLang].noneKeysYet));
 				return;
 			}
 
@@ -359,10 +652,11 @@ function renderKeys(apiKeys = null) {
 					.addClass("d-flex")
 					.css("gap", "6px");
 
+				const index = Object.keys(keys).indexOf(id); // 0-based
 				const $editBtn = $("<button>")
 					.addClass("btn btn-outline-secondary editBtn")
-					.attr("title", translations?.[currentLang]?.edit ?? "Edit")
-					.html('<i class="fa fa-pen"></i>')
+					.attr("title", translations?.[currentLang]?.edit + ` (${modifierKey}+${index + 1})` ?? "Edit")
+					.html(`<i class="fa fa-pen"></i>`)
 					.on("click", () => editKey(id));
 
 				const $deleteBtn = $("<button>")
@@ -375,16 +669,20 @@ function renderKeys(apiKeys = null) {
 				$item.append($infoBlock, $actionsBlock);
 				$list.append($item);
 			});
+
+			const $deleteAllBtn = $("<button>")
+				.addClass("btn btn-danger")
+				.attr("id", "deleteAllBtn")
+				.attr("title", translations?.[currentLang]?.clearAllBtn ?? "Delete all keys")
+				.html(`<i class="fa fa-trash-can"></i> ${translations[currentLang]?.clearAllBtn} ${createBadge(modifierKey, delKey)}`)
+				.on("click", () => deleteAllKeys());
+			$list.append($deleteAllBtn);
 		};
 
-		if (apiKeys) {
-			showKeys({ apiKeys });
-		} else {
-			storage.get({ apiKeys: {} }).then(showKeys);
-		}
+		if (apiKeys) showKeys({ apiKeys });
+		else storage.get({ apiKeys: {} }).then(showKeys);
 	});
 }
-
 
 $(() => {
 	getStorageArea().then(storage => {
@@ -395,149 +693,9 @@ $(() => {
 		});
 	});
 
-	const $formIdEl = $("#formId");
-	const $apiKeyEl = $("#apiKey");
-	const $keyNameEl = $("#keyName");
-
-	let apiKeyTimer = null;
-
-	$apiKeyEl.on("input", function () {
-		clearTimeout(apiKeyTimer);
-		const apiKey = $(this).val().trim();
-
-		if (apiKey.length === 0) $(this).removeClass("is-invalid");
-		else if ((apiKey.length > 0 && apiKey.length < 100) || apiKey.length > 100) $(this).addClass("is-invalid");
-		else if (apiKey.length === 100) {
-			apiKeyTimer = setTimeout(async function () {
-				const formId = await extractFormInfo(apiKey);
-				if (formId) {
-					$formIdEl.val(formId);
-					$(this).removeClass("is-invalid").addClass("is-valid");
-					updateSaveButtonState();
-					$keyNameEl.trigger("focus");
-				} else {
-					$formIdEl.val("");
-					updateSaveButtonState();
-				}
-			}, 600); // задержка 600 мс после ввода
-		}
-	});
-
-	async function extractFormInfo(apiKey) {
-		try {
-			const response = await fetch("https://kompikok.salesdrive.me/api/order/list/?limit=1", {
-				method: "GET",
-				headers: {
-					"Form-Api-Key": apiKey
-				}
-			});
-
-			if (!response.ok) throw new Error(translations[currentLang].invalidKey);
-
-			const linkHeader = response.headers.get("Link");
-			if (!linkHeader) throw new Error(translations[currentLang].invalidKey);
-
-			const matchFormId = linkHeader.match(/formId=([^&]+)/);
-			return matchFormId?.[1] || null;
-		} catch (e) {
-			showStatusMessage(`${translations[currentLang].errWhileExtractKey}: ${e.message}`, "error")
-			return null;
-		}
-	}
-
-	function updateSaveButtonState() {
-		const formIdFilled = $formIdEl.val().trim() !== "";
-		const keyNameFilled = ($keyNameEl.val().trim() !== "" && $keyNameEl.val().trim().length > 2);
-		$saveBtn.prop("disabled", !(formIdFilled && keyNameFilled));
-	}
-
-	$keyNameEl.on("input", function () {
-		const keyName = $(this).val().trim();
-		const isInvalid = keyName.length < 3;
-
-		$(this)
-			.toggleClass("is-invalid", isInvalid)
-			.toggleClass("is-valid", !isInvalid);
-
-		updateSaveButtonState();
-	});
-
-	const $keysList = $("#keysList");
-
-	const $toggleKeysBtn = $("#toggleKeysBtn");
-	$toggleKeysBtn.on("click", function () {
-		const isVisible = $keysList.css("maxHeight") !== "0px";
-
-		if (isVisible) {
-			$keysList.css({
-				maxHeight: "0px",
-				opacity: "0"
-			});
-			$toggleKeysBtn.text("Показать сохранённые ключи ⬇");
-			$toggleKeysBtn.removeClass("show").addClass("hide");
-		} else {
-			$keysList.css({
-				maxHeight: $keysList.prop("scrollHeight") + "px",
-				opacity: "1"
-			});
-			console.log($keysList.prop('scrollHeight')); // > 0?
-			$toggleKeysBtn.text("Скрыть сохранённые ключи ⬆");
-			$toggleKeysBtn.removeClass("hide").addClass("show");
-		}
-
-		const isHidden = $toggleKeysBtn.hasClass("hide");
-		$toggleKeysBtn.toggleClass("hide show");
-		$toggleKeysBtn.text(!isHidden ? translations[currentLang].hideKeys : translations[currentLang].toggleKeysBtn);
-
-		// $keysList.toggleClass("open");
-	});
-
 	$langToggleBtn.on("click", () => {
 		$(".editBtn").attr("title", translations[currentLang].edit);
 		$(".deleteBtn").attr("title", translations[currentLang].delete);
-	});
-
-	$keyNameEl.on("keydown", (e) => {
-		if (e.key === "Enter" && !$saveBtn.prop("disabled")) {
-			e.preventDefault(); // предотвращаем отправку формы
-			$saveBtn.trigger("click");    // имитируем нажатие кнопки
-		}
-	});
-
-	const $saveBtn = $("#saveBtn");
-	$saveBtn.on("click", function () {
-		const formId = $formIdEl.val().trim();
-		const apiKey = $apiKeyEl.val().trim();
-		const keyName = $keyNameEl.val().trim();
-
-		if (!formId || !apiKey || !keyName) {
-			showStatusMessage(translations[currentLang].fillAllRows, "warning");
-			return
-		}
-
-		getStorageArea().then(storage => {
-			storage.get({ apiKeys: {} }).then(({ apiKeys }) => {
-				apiKeys[formId] = { name: keyName, key: apiKey };
-				storage.set({ apiKeys }).then(() => {
-					$("#apiKey, #keyName").val("");
-					$('#formId')
-						.prop('readonly', false)
-						.val('')
-						.addClass('cleared') // Добавим эффект, если хочешь
-						.prop('readonly', true);
-					renderKeys(apiKeys);
-				})
-			});
-		});
-
-		showStatusMessage(translations[currentLang].succKeySaved, "success")
-		$apiKeyEl.trigger("focus");
-	});
-
-	$("#clearAllBtn").on("click", () => {
-		if (!confirm(translations[currentLang].removeAllApiKeys)) return;
-		getStorageArea().then(storage => storage.set({ apiKeys: {} }).then(() => renderKeys({})));
-		showStatusMessage(translations[currentLang].allKeysCleared, "success")
 	});
 
 	$("#exportBtn").on("click", () => {
@@ -693,4 +851,28 @@ $(() => {
 		$("#previewContainer").hide();
 		previewData = null;
 	});
+
+	$(document).on('keydown', function(e) {
+		const tag = e.target.tagName.toLowerCase();
+		if (tag === 'input' || tag === 'textarea') return;
+
+		const cmd = isMac ? e.metaKey : e.ctrlKey;
+
+		if (cmd && e.key === 'Backspace') {
+			e.preventDefault();
+			$('#deleteAllBtn').trigger('click');
+		}
+
+		if (cmd && (e.key === 'n' || e.key === 'N')) {
+			e.preventDefault();
+			$('#addBtn').trigger('click');
+		}
+
+		const num = parseInt(e.key);
+		if (!isNaN(num) && num >= 1 && num <= 9) {
+			e.preventDefault();
+			$(".editBtn").eq(num - 1).trigger("click");
+		}
+	});
+
 })

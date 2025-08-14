@@ -12,6 +12,7 @@
 				font-family: sans-serif;
 				padding-top: 80px;
 				width: 300px;
+				height: 400px;
 				transition: background-color 0.3s ease, color 0.3s ease;
 			}
 			input {
@@ -185,7 +186,6 @@
 
 			/* Элементы форм внутри модалки, чтобы были в одном стиле */
 			body.dark-theme .modal-content input,
-			body.dark-theme .modal-content button,
 			body.dark-theme .modal-content select,
 			body.dark-theme .modal-content textarea {
 				background-color: #2c2c2c;
@@ -200,6 +200,16 @@
 				box-shadow: 0 0 0 .2rem rgba(255,255,255,.15);
 				border-color: #666;
 			}
+			.kbd-badge {
+				background: #eee;
+				border-radius: 4px;
+				padding: 2px 6px;
+				font-size: 0.9rem;
+				font-family: monospace;
+				color: #333;
+				margin-left: 6px;
+			}
+
 		</style>
 		<title>SalesDrive Tools</title>
 	</head>
@@ -223,6 +233,26 @@
 				</div>
 			</div>
 		</div>
+
+		<div id="editFormTemplate" class="d-none">
+			<form id="editForm">
+				<div class="mb-2 has-validation">
+					<label for="editValue" class="form-label">API-ключ</label>
+					<input type="text" class="form-control" id="editValue" placeholder="API ключ SalesDrive" required>
+					<div id="apiKeyLoader" class="text-center my-2" style="display: none;">
+						<i class="fas fa-spinner fa-spin text-primary" style="font-size: 1.2em;"></i>
+					</div>
+					<div class="invalid-feedback" id="enterValidKey">
+						Введите действительный ключ (100 символов).
+					</div>
+				</div>
+				<div class="mb-2">
+					<label for="editName" class="form-label" id="editNameText">Имя ключа</label>
+					<input type="text" class="form-control" id="editName" placeholder="Введите понятное имя ключа" required>
+				</div>
+			</form>
+		</div>
+
 		<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
 			<div class="modal-dialog modal-dialog-centered">
 				<div class="modal-content">
@@ -230,59 +260,27 @@
 						<h5 class="modal-title">Подтверждение</h5>
 						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
 					</div>
-					<div class="modal-body">
-						<form id="editForm" class="d-none">
-							<div class="mb-2">
-								<label for="editName" class="form-label" id="editNameText">Имя ключа</label>
-								<input type="text" class="form-control" id="editName" required>
-							</div>
-							<div class="mb-2">
-								<label for="editValue" class="form-label">API-ключ</label>
-								<input type="text" class="form-control" id="editValue" required>
-							</div>
-						</form>
-					</div>
+					<div class="modal-body"></div>
 					<div class="modal-footer">
-						<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" id="cancel">Отмена</button>
 						<button type="button" class="btn btn-danger" id="confirmModalOk">Удалить</button>
+						<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" id="cancel">Отмена</button>
 					</div>
 				</div>
 			</div>
 		</div>
-		<div class="px-2 has-validation">
-			<label for="apiKey" class="form-label" id="addApiKeyText">Добавить API-ключ</label>
-			<input type="text" id="apiKey" class="form-control" placeholder="API ключ">
-			<div class="invalid-feedback" id="enterValidKey">
-				Введите действительный ключ (100 символов).
-			</div>
-		</div>
-		<div class="px-2">
-			<label id="keyNameText" for="keyName" class="form-label">Имя ключа</label>
-			<input type="text" id="keyName" class="form-control" placeholder="Введите понятное имя ключа">
-		</div>
-		<div class="px-2">
-			<label for="formId" class="form-label">Form ID</label>
-			<input type="text" id="formId" class="form-control" placeholder="Заполнится автоматически" readonly>
-		</div>
+
 		<div class="px-2 mb-2">
 			<div class="px-2 my-2 status-box" id="statusMessage" style="display: none;">
 				<span class="status-icon" id="statusIcon" style="margin-right: 6px;"></span>
 				<span class="status-text" id="statusText"></span>
 			</div>
 		</div>
-		<div class="px-2">
-			<button id="saveBtn" class="btn btn-primary" disabled>Сохранить</button>
-			<button id="clearAllBtn" class="btn btn-danger">Удалить все ключи</button>
-			<button id="toggleKeysBtn" class="btn btn-sm btn-outline-secondary hide" style="margin-bottom: 8px;">
-				Показать сохранённые ключи
-			</button>
-		</div>
-		<div id="keysList" class="px-2" style="
-		  max-height: 0;
-		  overflow: hidden;
-		  transition: max-height 0.4s ease, opacity 0.4s ease;
-		  opacity: 0;
-		"></div>
+
+		<div id="keysList" class="px-2"></div>
+<!--		<div class="px-2">-->
+<!--			<button id="addKey" class="btn btn-primary">Добавить ключ</button>-->
+<!--			<button id="clearAllBtn" class="btn btn-danger">Удалить все ключи</button>-->
+<!--		</div>-->
 		<script src="js/popup.js"></script>
 		<div id="previewContainer" class="px-2" style="margin-top: 10px; display: none;">
 			<h5 id="previewText">Предпросмотр ключей:</h5>
@@ -294,5 +292,14 @@
 			<button id="confirmImportBtn" class="btn btn-success btn-sm">Импортировать выбранные</button>
 			<button id="cancelImportBtn" class="btn btn-secondary btn-sm">Отмена</button>
 		</div>
-  	</body>
+		<div id="toastContainer" style="
+			position: fixed;
+			top: 20px;
+			right: 20px;
+			z-index: 1055;
+			display: flex;
+			flex-direction: column;
+			align-items: flex-end;
+		"></div>
+	</body>
 </html>
